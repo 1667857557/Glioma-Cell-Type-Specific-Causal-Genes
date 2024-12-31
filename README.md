@@ -1,4 +1,6 @@
 # Glioma-Cell-Type-Specific-Causal-Genes
+Summary QTL database reference panel weights generated for this study used in TWAS and PWAS are available at https://figshare.com/articles/dataset/_b_TWAS_PWAS_gene_expression_prediction_models_b_/28080035. 
+
 
 MungeSumstats	v1.10.1	R
 
