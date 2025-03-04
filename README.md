@@ -10,17 +10,17 @@ inferCNV 	 v1.18.1	R
 
 PoPS	v0.2	Python
 
-MAGMA 	v1.10	Python
+MAGMA 	v1.10	Linux shell
 
 Mapgen	v0.5.8	R
 
-FUSION	-	Python
+FUSION	-	R
 
 ACAT-O	v0.91	R
 
-GCTA-GREML	v1.94.2	Python
+GCTA-GREML	v1.94.2	Linux shell
 
-SMR	v1.3.1	Python
+SMR	v1.3.1	Linux shell
 
 coloc	v5.2.3	R
 
