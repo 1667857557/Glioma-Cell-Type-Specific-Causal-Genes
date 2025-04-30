@@ -1,60 +1,66 @@
-setwd("G:/Database/CGGA")
-
-pacman::p_load(vroom, dplyr, limma, edgeR, readr)
-### Process CGGA data ----
-A <- vroom("CGGA.mRNAseq_693.Read_Counts-genes.20220620.txt")
-A <- as.data.frame(A)
-rownames(A) <- A$gene_name
-B <- A[,-1]
-saveRDS(B, file = "CGGA_693_ALL.rds.gz")
-clinical_data <- vroom("CGGA.mRNAseq_693_clinical.20200506.txt")
-colnames(clinical_data)
-GBM_samples <- clinical_data %>% 
-  filter(Histology == "GBM") %>% 
-  pull(CGGA_ID)
-other_samples <- clinical_data %>% 
-  filter(Histology != "GBM") %>% 
-  pull(CGGA_ID)
-A_GBM <- A %>% select(all_of(GBM_samples))
-A_other <- A %>% select(all_of(other_samples))
-saveRDS(A_GBM, file = "CGGA_693_GBM.rds.gz")
-saveRDS(A_other, file = "CGGA_693_noGBM.rds.gz")
-A_normal <- vroom("CGGA.normal_20.Read_Counts-genes.20230104.txt")
-A_normal <- as.data.frame(A_normal)
-rownames(A_normal) <- A_normal$gene_name
-A_normal <- A_normal[,-1]
-saveRDS(A_normal, file = "CGGA_20_NORMAL.rds.gz")
-rm(list = ls())
-gc()
-B_tumour <- readRDS("CGGA_693_ALL.rds.gz")
-B_normal <- readRDS("CGGA_20_NORMAL.rds.gz")
-B_tumour <- B_tumour[rowMeans(B_tumour) > 1, , drop = FALSE]
-B_normal <- B_normal[rowMeans(B_normal) > 1, , drop = FALSE]
+pacman::p_load("vroom","sva","stringr","RColorBrewer","FactoMineR","factoextra","limma","rjson","data.table","readr","tidyr","dplyr","devtools","ggplot2","tidyverse")
+setwd("G:/Database/TCGA")
+B_tumour <- readRDS("tcga_GBM_count.rds.gz")
+B_normal <- readRDS("tcga_norm_count.gz")
 B_tumour$rowname <- rownames(B_tumour)
 B_normal$rowname <- rownames(B_normal)
+setwd("G:/Database/TCGA/GTEX")
+gtex<-readRDS("gtex_GBM_norm.gz")
+gtex$rowname <- rownames(gtex)
 all.data <- merge(B_tumour, B_normal, by = "rowname")
+all.data <- merge(all.data, gtex, by = "rowname")
 rownames(all.data) <- all.data$rowname
 all.data$rowname <- NULL
-saveRDS(all.data, file = 'CGGA_ALL_693_normal.rds.gz')
+all.data[,] <- lapply(all.data[,], as.numeric)
+all.data <- all.data[rowMeans(all.data) > 1, , drop = FALSE]
+#saveRDS(all.data, file = 'TCGA_GBM_normal_GTEX.rds.gz')
 rm(list = ls())
 gc()
-dlbc.exp <- readRDS("CGGA_ALL_693_normal.rds.gz")
-dlbc.exp <- dlbc.exp[rowMeans(dlbc.exp) > 0, ]
+dlbc.exp <- readRDS("TCGA_GBM_normal_GTEX.rds.gz")
 Sample_infor <- data.frame(sample_name = colnames(dlbc.exp))
-Sample_infor$group <- ifelse(grepl("^N", Sample_infor$sample_name), "normal", "tumour")
-###DEG Analyses----
+Sample_infor$group <- ifelse(grepl("TCGA", Sample_infor$sample_name), "tumour",
+                             ifelse(grepl("GTEX", Sample_infor$sample_name) | grepl("^data", Sample_infor$sample_name), "normal", "normal"))
 
-dge <- DGEList(counts = dlbc.exp)
-dge <- calcNormFactors(dge)
-design <- model.matrix(~ factor(Sample_infor$group))
-colnames(design) <- levels(factor(Sample_infor$group))
-logCPM <- voom(dge, design, normalize = "quantile")
-fit <- lmFit(logCPM, design)
-fit <- eBayes(fit)
-output <- topTable(fit, coef = 2, n = Inf)
-output$GENE <- rownames(output)
-A <- subset(output, abs(logFC) > 1 & adj.P.Val < 0.05)
-write_tsv(output, file = "pan_CGGA_693_DEG_limma_all.txt")
-write_tsv(A, file = "pan_CGGA_693_DEG_limma_significant.txt")
-rm(list = ls())
+Sample_infor$Sample_origination <- ifelse(grepl("GTEX", Sample_infor$sample_name), "GTEX",
+                                          ifelse(grepl("TCGA", Sample_infor$sample_name) | grepl("^data", Sample_infor$sample_name), "TCGA", "TCGA"))
+
+str(dlbc.exp[1:3, 1:3])
+PCA.plot = function(dat,col){
+  df.pca <- PCA(t(dat), graph = FALSE)
+  fviz_pca_ind(df.pca,
+               geom.ind = "point",
+               col.ind = col ,
+               addEllipses = TRUE,
+               legend.title = "Groups")
+}
 gc()
+library(sva)
+library(edgeR)
+expr_count_combat <- ComBat_seq(counts = as.matrix(dlbc.exp), 
+                                batch = Sample_infor$Sample_origination,
+                                group = Sample_infor$group)
+dge <- DGEList(counts = expr_count_combat)
+dge <- calcNormFactors(dge, method = "TMM")
+expr_count_combat_cpm <-  edgeR::cpm(dge, log = TRUE, prior.count = 1)
+p4 <- PCA.plot(expr_count_combat_cpm,paste0(Sample_infor$Sample_origination,"-",Sample_infor$group))
+pdf("PCA_ComBat_seq_TCGA_GTEx_GBM.pdf", width = 8, height = 6)
+p4
+dev.off()
+saveRDS(expr_count_combat_cpm ,file = "ComBat_seq_TCGA_GTEx_GBM.rds")
+library(limma)
+library(edgeR)
+group <- factor(Sample_infor$group, levels = c("normal", "tumour"))
+design <- model.matrix(~ 0 + group)
+colnames(design) <- levels(group)
+fit <- lmFit(expr_count_combat_cpm, design)
+contrast_matrix <- makeContrasts(tumour - normal, levels = design)
+fit_contrast <- contrasts.fit(fit, contrast_matrix)
+fit_ebayes <- eBayes(fit_contrast)
+
+de_genes <- topTable(fit_ebayes, 
+                     number = Inf, 
+                     adjust.method = "BH",
+                     p.value = 0.05,
+                     lfc = 1)
+de_genes$GENE<-rownames(de_genes)
+write.csv(de_genes, "DE_TCGA_GTEx_GBM.csv")
