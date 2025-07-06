@@ -1,4 +1,6 @@
 # Glioma-Cell-Type-Specific-Causal-Genes
+
+This repository contains code supporting "Single-cell multi-omic integration analysis prioritizes druggable genes and reveals cell-type-specific causal effects in glioblastomagenesis" by Huang et al. (2025). You can access the preprint at medRxiv.
 cis-QTL reference panel weights generated for this study used in TWAS and PWAS are available at https://figshare.com/articles/dataset/_b_TWAS_PWAS_gene_expression_prediction_models_b_/28080035. 
 
 
