@@ -80,3 +80,12 @@ LCV	-
 
 ViSNP	v0.1.0	
 
+
+## R package scaffold for GWAS-post workflows
+
+A new package scaffold is available under `GWASpost/`.
+
+- Main implemented functions: `run_coloc()`, `run_hdl()`, `run_ldsc()`, `run_Mapgen()`, `run_lcv()`
+- Purpose: run the full colocalization workflow directly from one GWAS summary file and a local directory of eQTL summary files.
+
+See `GWASpost/README.md` for required columns and usage.
