@@ -1,5 +1,0 @@
-export(run_coloc)
-export(run_hdl)
-export(run_ldsc)
-export(run_Mapgen)
-export(run_lcv)
