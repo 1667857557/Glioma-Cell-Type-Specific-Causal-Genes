@@ -85,7 +85,7 @@ ViSNP	v0.1.0
 
 A new package scaffold is available under `GWASpost/`.
 
-- Main implemented function: `run_coloc()`
+- Main implemented functions: `run_coloc()`, `run_hdl()`, `run_ldsc()`, `run_Mapgen()`, `run_lcv()`
 - Purpose: run the full colocalization workflow directly from one GWAS summary file and a local directory of eQTL summary files.
 
 See `GWASpost/README.md` for required columns and usage.
